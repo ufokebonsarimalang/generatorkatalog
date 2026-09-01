@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UFO Generator Template Produk</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #0f172a;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h2 { margin-bottom: 5px; color: #38bdf8; }
+  p { color: #94a3b8; font-size: 14px; margin-top: 0; margin-bottom: 20px; }
+  
+  .main-container {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1100px;
+    width: 100%;
+  }
+
+  .control-panel {
+    background: #1e293b;
+    padding: 24px;
+    border-radius: 16px;
+    width: 320px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: fit-content;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .input-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #cbd5e1;
+  }
+
+  .input-group input[type="file"] {
+    background: #0f172a;
+    border: 1px dashed #475569;
+    padding: 10px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .btn-download {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    margin-top: 10px;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+  }
+  .btn-download:hover {
+    background: #1d4ed8;
+  }
+
+  .preview-area {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  canvas {
+    width: 450px;
+    height: 450px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    background: #ffffff;
+  }
+</style>
+</head>
+<body>
+
+  <h2>🎨 UFO Template Generator</h2>
+  <p>Upload logo brand dan foto produk, gambar otomatis tersusun presisi!</p>
+
+  <div class="main-container">
+    <!-- PANEL KONTROL -->
+    <div class="control-panel">
+      <div class="input-group">
+        <label>1. Upload Logo Utama UFO (Opsional / Tetap)</label>
+        <input type="file" id="uploadUfoLogo" accept="image/*">
+      </div>
+
+      <div class="input-group">
+        <label>2. Upload Logo Brand (Contoh: LG, Polytron)</label>
+        <input type="file" id="uploadBrandLogo" accept="image/*">
+      </div>
+
+      <div class="input-group">
+        <label>3. Upload Foto Produk Elektronik</label>
+        <input type="file" id="uploadProduk" accept="image/*">
+      </div>
+
+      <button class="btn-download" onclick="downloadGambar()">💾 Download Gambar Selesai</button>
+    </div>
+
+    <!-- PREVIEW CANVAS -->
+    <div class="preview-area">
+      <canvas id="canvas" width="1000" height="1000"></canvas>
+    </div>
+  </div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Load aset statis bawaan template (Background bawah & Logo UFO default)
+  const templateBottom = new Image();
+  templateBottom.src = 'images/template-footer.png'; // Pastikan path footer sesuai atau buat otomatis via canvas
+
+  let imgUfoLogo = new Image();
+  let imgBrandLogo = null;
+  let imgProduk = null;
+
+  // Set default UFO logo jika ada di folder images
+  imgUfoLogo.src = 'images/ufo-logo.png'; 
+
+  function drawTemplate() {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Gambar Logo UFO di kiri atas
+    if (imgUfoLogo.complete && imgUfoLogo.naturalWidth !== 0) {
+      ctx.drawImage(imgUfoLogo, 80, 50, 320, 90);
+    }
+
+    // Garis pembatas vertikal di tengah atas
+    ctx.strokeStyle = "#0077c8";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(460, 45);
+    ctx.lineTo(460, 145);
+    ctx.stroke();
+
+    // 2. Gambar Logo Brand yang di-upload user di sebelah kanan garis
+    if (imgBrandLogo) {
+      // Mengatur ukuran logo brand agar proporsional di area kanan
+      let bWidth = 350;
+      let bHeight = (imgBrandLogo.height / imgBrandLogo.width) * bWidth;
+      if (bHeight > 90) { bHeight = 90; bWidth = (imgBrandLogo.width / imgBrandLogo.height) * bHeight; }
+      ctx.drawImage(imgBrandLogo, 510, 50 + (90 - bHeight)/2, bWidth, bHeight);
+    }
+
+    // 3. Gambar Produk di tengah (Presisi otomatis di dalam kotak)
+    if (imgProduk) {
+      let pMaxWidth = 780;
+      let pMaxHeight = 620;
+      let pWidth = imgProduk.width;
+      let pHeight = imgProduk.height;
+
+      let ratio = Math.min(pMaxWidth / pWidth, pMaxHeight / pHeight);
+      let drawW = pWidth * ratio;
+      let drawH = pHeight * ratio;
+      let drawX = (canvas.width - drawW) / 2;
+      let drawY = 180 + (pMaxHeight - drawH) / 2;
+
+      ctx.drawImage(imgProduk, drawX, drawY, drawW, drawH);
+    }
+
+    // 4. Footer Bagian Bawah (Gradient Biru + Ikon Fitur)
+    let gradient = ctx.createLinearGradient(0, 850, 0, 1000);
+    gradient.addColorStop(0, "#0077c8");
+    gradient.addColorStop(1, "#00538f");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 850, canvas.width, 150);
+
+    // Teks & Ikon Footer Standar
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 28px 'Inter', sans-serif";
+    ctx.fillText("100%", 220, 945);
+    ctx.font = "20px 'Inter', sans-serif";
+    ctx.fillText("PRODUK ORIGINAL", 300, 935);
+    
+    ctx.fillText("GARANSI RESMI", 580, 935);
+    ctx.fillText("PENGIRIMAN CEPAT", 820, 935);
+  }
+
+  // Event Listener Upload Logo Brand
+  document.getElementById('uploadBrandLogo').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        imgBrandLogo = new Image();
+        imgBrandLogo.onload = drawTemplate;
+        imgBrandLogo.src = event.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Event Listener Upload Foto Produk
+  document.getElementById('uploadProduk').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        imgProduk = new Image();
+        imgProduk.onload = drawTemplate;
+        imgProduk.src = event.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Render awal saat dibuka
+  window.onload = () => {
+    imgUfoLogo.onload = drawTemplate;
+    setTimeout(drawTemplate, 200); // Pastikan terpanggil
+  };
+
+  // Fungsi Download Hasil Gambar
+  function downloadGambar() {
+    let link = document.createElement('a');
+    link.download = 'katalog-ufo-produk.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+</script>
+
+</body>
+</html>
